@@ -1,0 +1,150 @@
+﻿@page "/searchProfile"
+
+@using System.Threading.Tasks
+@using Keepi.Client.Repositories.Interfaces
+@inject ISearchUserRepository searchUserRepository
+@using System.Timers
+@using Keepi.Shared
+@inject IJSRuntime JS
+
+<style>
+    .search-container {
+        margin: 20px;
+    }
+
+        .search-container input {
+            width: 300px;
+            padding: 5px;
+        }
+
+        .search-container ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 10px 0 0;
+        }
+
+        .search-container li {
+            margin: 5px 0;
+        }
+
+    .btn_img {
+        width: 25px;
+        height: 25px;
+    }
+</style>
+
+@if (loggedOnUser == null)
+{
+    <h6>Please login first...</h6>
+}
+else
+{
+    <div align="center" class="search-container">
+
+        <input style="width: 400px; border-radius: 5px; border: solid gray 2px; height:40px;" type="text" @bind="searchQuery" placeholder="Enter user name..." />
+        <button style="width: 40px; height: 40px; border-radius: 5px;" @onclick=SearchUsers>
+            <image style="width: 25px; height: 25px;" src="/Resources/Images/search.png"></image>
+        </button>
+        <div>
+            @if (!string.IsNullOrEmpty(searchQuery))
+            {
+                @if (searchResults_Users == null)
+                {
+                    <li>Loading...</li>
+                }
+                else if (searchResults_Users.Count == 0)
+                {
+                    <li>There are no results...</li>
+                }
+                else
+                {
+                    @foreach (var user in searchResults_Users)
+                    {
+                        <button style="border: none; background: none;" @onclick="()=>GetSelectedUser(user)">
+                            <div style="display: flex; margin-top: 20px; width: 200px; height: 40px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+                                <img style="width: 20px; height: 20px; margin-left: 10px; margin-right: 10px; margin-top:auto; margin-bottom:auto;" src="@user.ProfilePhoto" />
+                                <p style="font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; margin-top:auto; margin-bottom:auto;">@user.Username</p>
+                            </div>
+                        </button>
+                        <br />
+                    }
+                }
+            }
+        </div>
+    </div>
+
+    <div>
+        @if (selectedUser != null)
+        {
+            <Profile user="@selectedUser" />
+        }
+    </div>
+}
+
+
+
+
+
+@code {
+    private string searchQuery = "";
+    private List<string> searchResults = new List<string>();
+    private User loggedOnUser;
+    private User selectedUser;
+    private Timer timer;
+    private List<User> searchResults_Users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loggedOnUser = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+
+    }
+
+
+
+    private async Task GetSelectedUser(User user)
+    {
+        searchResults_Users = new List<User>();
+        searchQuery = string.Empty;
+
+        var response = await searchUserRepository.GetUserByUserName(user.Username);
+        if (response != null && response.Count > 0)
+        {
+            selectedUser = response[0];
+        }
+
+    }
+
+    private async Task SearchUsers()
+    {
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            selectedUser = null;
+            searchResults = await searchUserRepository.SearchUsers(searchQuery);
+            await GetSearchResultsUserList(searchResults);
+        }
+        else
+        {
+            searchResults.Clear();
+        }
+    }
+
+    private async Task GetSearchResultsUserList(List<string> userNamesList)
+    {
+        searchResults_Users = new List<User>();
+
+        if (userNamesList == null || userNamesList.Count == 0)
+            return;
+
+        foreach (var userName in userNamesList)
+        {
+            if (userName != loggedOnUser.Username)
+            {
+                var response = await searchUserRepository.GetUserByUserName(userName);
+                if (response != null && response.Count > 0)
+                {
+                    searchResults_Users.Add(response[0]);
+                }
+            }
+        }
+    }
+}
