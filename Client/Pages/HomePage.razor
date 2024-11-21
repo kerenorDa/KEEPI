@@ -1,0 +1,327 @@
+﻿@page "/home"
+@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject HttpClient Http
+@inject IPostRepository postRepository
+@inject IJSRuntime JS
+
+<style>
+    .filterBtn {
+        width: 120px;
+        height: 120px;
+        background: #EAEAEA;
+        border: none;
+        border-radius: 50%;
+        align-content: center;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    }
+
+        .filterBtn:hover {
+            border: solid gray 1px;
+            background: #F8F8F8;
+        }
+
+        .filterBtn:active {
+            border: solid gray 1px;
+            background: #E0E0E0;
+        }
+
+    .btnImage {
+        width: 80px;
+        height: 80px;
+    }
+
+    .top_div {
+        background-image: url("/Resources/Images/homeBackground4.png");
+        background-size: cover;
+        width: 100%;
+        height: 180px;
+        border-radius: 10px;
+    }
+
+    .header {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    .newPostBtn {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        width: 200px;
+        height: 30px;
+        font-weight: bold;
+        color: white;
+        font-size: 18px;
+        /* background: #93C185; */
+        background: #703352;
+        border: none;
+        border-radius: 20px;
+        margin-bottom: 30px;
+    }
+
+        .newPostBtn:active {
+            /* background: #ABCFA0; */
+            background: #B8658F;
+        }
+
+    .saveNewPostBtn {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        width: 70px;
+        height: 30px;
+        font-weight: bold;
+        color: white;
+        font-size: 16px;
+        /* background: #93C185; */
+        background: #703352;
+        border: none;
+        border-radius: 20px;
+        margin-top: 10px;
+        margin-right: 10px;
+    }
+
+        .saveNewPostBtn:active {
+            /* background: #ABCFA0; */
+            background: #B8658F;
+        }
+
+</style>
+
+<table style="width: 100%; margin-top: 0px; background-image: url('/Resources/Images/home3.png'); background-size: cover; height: 100vh;">
+    <tr style="height:200px;">
+        <table style="width: 100%; margin-bottom: 30px; margin-top: 50px;">
+            <tr>
+                <td style="width: 2%"></td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid purple 3px;" @onclick="()=>FilterPostsList(0)" title="All categories">
+                        <image class="btnImage" src="/Resources/Images/AllCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid orange 3px;" @onclick="()=>FilterPostsList(1)" title="Animal care services">
+                        <image class="btnImage" src="/Resources/Images/AnimalCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid lightblue 3px;" @onclick="()=>FilterPostsList(2)" title="Baby and child care services">
+                        <image class="btnImage" src="/Resources/Images/BabyCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid lightgreen 3px;" @onclick="()=>FilterPostsList(3)" title="Elderly care services">
+                        <image class="btnImage" src="/Resources/Images/AdultCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid pink 3px;" @onclick="()=>FilterPostsList(4)" title="Event security">
+                        <image class="btnImage" src="/Resources/Images/EventCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid red 3px;" @onclick="()=>FilterPostsList(5)" title="Security of private buildings">
+                        <image class="btnImage" src="/Resources/Images/PrivateBuildingsCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid yellow 3px;" @onclick="()=>FilterPostsList(6)" title="Security of public buildings">
+                        <image class="btnImage" src="/Resources/Images/PublicBuildingsCategory.png"></image>
+                    </button>
+                </td>
+                <td align="center" style="width: 12%">
+                    <button class="filterBtn" style="border: solid brown 3px;" @onclick="()=>FilterPostsList(7)" title="Storage services">
+                        <image class="btnImage" src="/Resources/Images/StorageCategory.png"></image>
+                    </button>
+                </td>
+                <td style="width: 2%"></td>
+            </tr>
+        </table>
+    </tr>
+    <tr align="center" style="height:30px; max-height: 30px">
+        @if (!showNewPostComponent)
+        {
+            <td>
+                <button class="newPostBtn" @onclick="CreateNewPostBtn">Create new post</button>
+            </td>
+        }
+        else
+        {
+            <div style="border: none; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius:10px; margin-bottom: 10px; width: 500px; height: auto;">
+                <table style="width: 100%">
+                    <tr>
+                        <p style="margin-left: 50px; margin-top: 10px; font-weight: bold;">Category:</p>
+                    </tr>
+                    <tr align="center">
+                        <select style="width: 80%; height: 30px;" id="comboBox" @bind="selectedOption">
+                            @foreach (var option in Categories)
+                            {
+                                <option value="@option">@option</option>
+                            }
+                        </select>
+                    </tr>
+                    <tr>
+                        <p style="margin-left: 50px; margin-top: 10px; font-weight: bold;">Content:</p>
+                    </tr>
+                    <tr align="center">
+                        <textarea style="width: 80%; height: 60px; max-height: 60px;" type="text" @bind="postContent" ></textarea>
+                    </tr>
+                    <tr>
+                        <div style="display: flex; margin-left: 50px;">
+                            <button class="saveNewPostBtn" @onclick="SaveNewPost">Save</button>
+                            <button class="saveNewPostBtn" @onclick="CancelNewPost">Cancel</button>
+                        </div>
+                    </tr>
+                    <tr>
+                        <p></p>
+                    </tr>
+                </table>
+            </div>
+        }
+    </tr>
+    <tr align="center">
+        <h3 style="font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">@selectedFilter</h3>
+        <br />
+        <PostComponent postsList="@_filteredPostsList" />
+    </tr>
+</table>
+
+
+@code {
+    public List<Post> _postsList { get; set; }
+    public List<Post> _filteredPostsList { get; set; }
+    User user;
+    string selectedFilter = "All categories";
+
+    private bool showNewPostComponent;
+    private string selectedOption;
+    private string postContent;
+
+    private List<string> Categories = new List<string>
+    {
+      "Animal care services",
+      "Baby and child care services",
+      "Elderly care services",
+      "Event security",
+      "Security of private buildings",
+      "Security of public buildings",
+      "Storage services"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        selectedOption = Categories[0];
+
+        user = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+
+        var allPosts = await postRepository.GetAllPosts();
+        _postsList = allPosts.Where(p => p.UserId != user.Id).ToList();
+        _filteredPostsList = _postsList;
+    }
+
+    private void CreateNewPostBtn()
+    {
+        showNewPostComponent = true;
+    }
+
+    private async Task SaveNewPost()
+    {
+        if (string.IsNullOrEmpty(selectedOption) || string.IsNullOrEmpty(postContent))
+        {
+            await JS.InvokeAsync<object>("alert", "Please fill in all the fields");
+            return;
+        }
+
+        var response = await Http.PostAsJsonAsync("api/post", new string[] { selectedOption, postContent, user.Id.ToString() });
+
+        if (response != null)
+        {
+            showNewPostComponent = false;
+            selectedOption = Categories[0];
+            postContent = string.Empty; 
+            await JS.InvokeAsync<object>("alert", "New post created successfully!");
+
+            //NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+        }
+        else
+        {
+            showNewPostComponent = false;
+            selectedOption = Categories[0];
+            postContent = string.Empty; 
+            await JS.InvokeAsync<object>("alert", "Failed to save new post");
+        }
+
+    }
+
+
+    // private async Task SaveNewPost()
+    // {
+    //     Console.WriteLine(postContent);
+    //     // return;
+    //     if (string.IsNullOrEmpty(selectedOption) || string.IsNullOrEmpty(postContent))
+    //     {
+    //         await JS.InvokeAsync<object>("alert", "Please fill in all the fields");
+    //         return;
+    //     }
+    //     List<Post> response = await postRepository.AddNewPost(selectedOption, postContent, user.Id);
+    //     if (response != null && response.Count > 0)
+    //     {
+    //         showNewPostComponent = false;
+    //         await JS.InvokeAsync<object>("alert", "New post created successfully!");
+
+    //         //NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+    //     }
+    //     else
+    //     {
+    //         showNewPostComponent = false;
+    //         await JS.InvokeAsync<object>("alert", "Failed to save new post");
+
+    //         //TODO failed to save...
+    //     }
+
+    // }
+
+    private void CancelNewPost()
+    {
+        selectedOption = Categories[0];
+        postContent = string.Empty;
+        showNewPostComponent = false;
+    }
+
+    private void FilterPostsList(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                _filteredPostsList = _postsList;
+                selectedFilter = "All categories";
+                break;
+            case 1:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[0]).ToList();
+                selectedFilter = "Animal care services";
+                break;
+            case 2:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[1]).ToList();
+                selectedFilter = "Baby and child care services";
+                break;
+            case 3:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[2]).ToList();
+                selectedFilter = "Elderly care services";
+                break;
+            case 4:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[3]).ToList();
+                selectedFilter = "Event security";
+                break;
+            case 5:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[4]).ToList();
+                selectedFilter = "Security of private buildings";
+                break;
+            case 6:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[5]).ToList();
+                selectedFilter = "Security of public buildings";
+                break;
+            case 7:
+                _filteredPostsList = _postsList.Where(p => p.Category == Categories[6]).ToList();
+                selectedFilter = "Storage services";
+                break;
+
+        }
+    }
+}

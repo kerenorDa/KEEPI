@@ -1,0 +1,944 @@
+﻿@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@using System.Text.RegularExpressions
+@inject HttpClient Http
+@inject IProfileRepository profileRepository
+@inject IPostRepository postRepository
+@inject ISearchUserRepository searchUserRepository
+@inject IWalletRepository walletRepository
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+
+<style>
+    .profile-picture {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 20px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    }
+
+    .tab-menu {
+        display: flex;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        color: gray;
+    }
+
+        .tab:hover {
+            background-color: #f0f0f0;
+        }
+
+        .tab.active {
+            color: #3C4F5E;
+            font-weight: bold;
+            border-bottom: 2px solid #FAA381;
+        }
+
+    .tab-content {
+        margin-top: 20px;
+    }
+
+    .top_div {
+        background-image: url("/Resources/Images/profileBackground.png");
+        background-size: cover;
+        width: 100%;
+        height: 150px;
+        border-radius: 10px;
+    }
+
+    .label {
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .editBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/editIcon.png");
+        background-size: cover;
+        margin-left: 10px;
+    }
+
+    .saveEditBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/saveIcon.png");
+        background-size: cover;
+        margin-left: 10px;
+        margin-top: -5px;
+    }
+
+    .cancelEditBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/cancelIcon.png");
+        background-size: cover;
+        margin-left: 10px;
+        margin-top: -5px;
+    }
+
+    .changePasswordBtn {
+        width: auto;
+        height: 30px;
+        background: #FF966C;
+        font-weight: bold;
+        border: none;
+        border-radius: 20px;
+    }
+
+        .changePasswordBtn:active {
+            background: #FAA381;
+        }
+
+
+    .followBtn {
+        width: 150px;
+        height: 40px;
+        background: #FF966C;
+        font-weight: bold;
+        border: solid #FF966C 2px;
+        border-radius: 20px;
+        margin-top: 10px;
+    }
+
+        .followBtn:active {
+            background: #FAA381;
+        }
+
+        .followBtn:hover {
+            border: solid gray 2px;
+        }
+
+
+    .depositBtn {
+        width: 200px;
+        height: 40px;
+        background: #FF966C;
+        font-weight: bold;
+        border: solid #FF966C 2px;
+        border-radius: 20px;
+    }
+
+        .depositBtn:hover {
+            border: solid gray 2px;
+        }
+
+        .depositBtn:active {
+            background: #FAA381;
+        }
+
+    .depositBtnIcon {
+        width: 25px;
+        height: 25px;
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+</style>
+
+
+@if (user == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="top_div"></div>
+
+    <table style="width: 100%; margin-top: -50px;">
+        <tr>
+            <td style="width: 25%; position: fixed;">
+                <div align="center" style="margin-right: 0px;">
+                    <table>
+                        <tr>
+                            @if (imageBase64 != null)
+                            {
+                                <img src="data:image/jpeg;base64, @imageBase64" class="profile-picture" />
+                            }
+                            else
+                            {
+                                <img src="@ProfileImagePath" alt="תמונת פרופיל" class="profile-picture" />
+                            }
+                        </tr>
+                        @if (isLoggedOnUser)
+                        {
+                            <tr align="right">
+                                @if (isEditingPicture)
+                                {
+                                    <button class="cancelEditBtn" style="margin-right: 50px;" @onclick="CancelEditProfilePicture" />
+                                }
+                                else
+                                {
+                                    <button class="editBtn" @onclick="EditProfilePicture" />
+                                }
+                            </tr>
+                            @if (isEditingPicture)
+                            {
+                                <tr>
+                                    <InputFile accept=".jpg,.jpeg,.png" OnChange="OnFileChange" />
+                                </tr>
+                            }
+                        }
+                        <tr>
+                            <h4 style="text-align: center; margin-top: 20px; font-weight:bold;">@user.FirstName @user.LastName</h4>
+                        </tr>
+                        <tr>
+                            <h6 style="text-align: center; margin-top: 5px; font-weight:bold;">@postsNum Posts</h6>
+                        </tr>
+                        <tr>
+                            <h6 style="text-align: center; margin-top: 5px; font-weight:bold;">@followersNum Followers</h6>
+                        </tr>
+                        <tr>
+                            <h6 style="text-align: center; margin-top: 5px; font-weight:bold;">@followingNum Following</h6>
+                        </tr>
+                        @if (!isLoggedOnUser)
+                        {
+                            <tr align="center">
+                                @if (isFollowedByLoggedOnUser)
+                                {
+                                    <button class="followBtn" @onclick="UnFollowUser">UnFollow</button>
+                                }
+                                else
+                                {
+                                    <button class="followBtn" @onclick="FollowUser">Follow</button>
+                                }
+                            </tr>
+                        }
+                    </table>
+                </div>
+            </td>
+            <td style="width: 75%;  margin-left: 25%; overflow-y: auto;">
+                <div class="tab-menu">
+                    <div class="tab @(activeTab == personalDetails_tab ? "active" : "")" @onclick="()=>SetActiveTab(personalDetails_tab)">
+                        <span class="oi oi-person" style="margin-right: 5px;" aria-hidden="true"></span>
+                        Personal Details
+                    </div>
+                    <div class="tab @(activeTab == myPosts_tab ? "active" : "")" @onclick="()=>SetActiveTab(myPosts_tab)">
+                        <span class="oi oi-list" style="margin-right: 5px;" aria-hidden="true"></span>
+                        Posts
+                    </div>
+                    @if (isLoggedOnUser)
+                    {
+                        <div class="tab @(activeTab == savedPosts_tab ? "active" : "")" @onclick="()=>SetActiveTab(savedPosts_tab)">
+                            <span class="oi oi-bookmark" style="margin-right: 5px;" aria-hidden="true"></span>
+                            Saved Posts
+                        </div>
+                    }
+                    <div class="tab @(activeTab == wallet_tab ? "active" : "")" @onclick="()=>SetActiveTab(wallet_tab)">
+                        <span class="oi oi-basket" style="margin-right: 5px;" aria-hidden="true"></span>
+                        Wallet
+                    </div>
+                    @if (isLoggedOnUser)
+                    {
+                        <div class="tab @(activeTab == followers_tab ? "active" : "")" @onclick="()=>SetActiveTab(followers_tab)">
+                            <span class="oi oi-list-rich" style="margin-right: 5px;" aria-hidden="true"></span>
+                            Followers
+                        </div>
+                        <div class="tab @(activeTab == following_tab ? "active" : "")" @onclick="()=>SetActiveTab(following_tab)">
+                            <span class="oi oi-bullhorn" style="margin-right: 5px;" aria-hidden="true"></span>
+                            Following
+                        </div>
+                    }
+                </div>
+
+                <div class="tab-content">
+                    @if (activeTab == personalDetails_tab)
+                    {
+                        <table style="width: 100%; border: solid black 0px;">
+                            <tr>
+                                <td style="width: 20%;">
+                                    <p class="label">User Name:</p>
+                                </td>
+                                <td>
+                                    <p>@user.Username</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">First Name:</p>
+                                </td>
+                                <td>
+                                    <div style="display: flex;">
+                                        @if (!isLoggedOnUser)
+                                        {
+                                            <p>@user.FirstName</p>
+                                        }
+                                        else
+                                        {
+                                            @if (!isEditingFirstName)
+                                            {
+                                                <p>@user.FirstName</p>
+                                                <button class="editBtn" @onclick="EditFirstName" />
+                                            }
+                                            else
+                                            {
+                                                <input style="margin-top: -10px;" @bind="editedUser.FirstName" />
+                                                <button class="saveEditBtn" @onclick="SaveEditFirstName" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditFirstName" />
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">Last Name:</p>
+                                </td>
+                                <td>
+                                    <div style="display: flex;">
+                                        @if (!isLoggedOnUser)
+                                        {
+                                            <p>@user.LastName</p>
+                                        }
+                                        else
+                                        {
+                                            @if (!isEditingLastName)
+                                            {
+                                                <p>@user.LastName</p>
+                                                <button class="editBtn" @onclick="EditLastName" />
+                                            }
+                                            else
+                                            {
+                                                <input style="margin-top: -10px;" @bind="editedUser.LastName" />
+                                                <button class="saveEditBtn" @onclick="SaveEditLastName" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditLastName" />
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">Email:</p>
+                                </td>
+                                <td>
+                                    <p>@user.Email</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">City:</p>
+                                </td>
+                                <td>
+                                    <div style="display: flex;">
+                                        @if (!isLoggedOnUser)
+                                        {
+                                            <p>@user.City</p>
+                                        }
+                                        else
+                                        {
+                                            @if (!isEditingCity)
+                                            {
+                                                <p>@user.City</p>
+                                                <button class="editBtn" @onclick="EditCity" />
+                                            }
+                                            else
+                                            {
+                                                <input style="margin-top: -10px;" @bind="editedUser.City" />
+                                                <button class="saveEditBtn" @onclick="SaveEditCity" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditCity" />
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">Phone Number:</p>
+                                </td>
+                                <td>
+                                    <div style="display: flex;">
+                                        @if (!isLoggedOnUser)
+                                        {
+                                            <p>@user.PhoneNumber</p>
+                                        }
+                                        else
+                                        {
+                                            @if (!isEditingPhone)
+                                            {
+                                                <p>@user.PhoneNumber</p>
+                                                <button class="editBtn" @onclick="EditPhone" />
+                                            }
+                                            else
+                                            {
+                                                <input style="margin-top: -10px;" @bind="editedUser.PhoneNumber" />
+                                                <button class="saveEditBtn" @onclick="SaveEditPhone" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditPhone" />
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <p class="label">Age:</p>
+                                </td>
+                                <td>
+                                    <div style="display: flex;">
+                                        @if (!isLoggedOnUser)
+                                        {
+                                            <p>@user.Age</p>
+                                        }
+                                        else
+                                        {
+                                            @if (!isEditingAge)
+                                            {
+                                                <p>@user.Age</p>
+                                                <button class="editBtn" @onclick="EditAge" />
+                                            }
+                                            else
+                                            {
+                                                <input style="margin-top: -10px;" type="number" @bind="tmpAge" />
+                                                <button class="saveEditBtn" @onclick="SaveEditAge" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditAge" />
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    @if (isLoggedOnUser)
+                                    {
+                                        @if (!isEditingPassword)
+                                        {
+                                            <button class="changePasswordBtn" @onclick="EditPassword">Change Password</button>
+                                        }
+                                        else
+                                        {
+                                            <p class="label">New Password:</p>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    @if (isLoggedOnUser)
+                                    {
+                                        @if (isEditingPassword)
+                                        {
+                                            <div style="display: flex;">
+                                                <input style="margin-top: -10px;" type="password" @bind="newPassword" />
+                                                <button class="saveEditBtn" @onclick="SaveEditPassword" />
+                                                <button class="cancelEditBtn" @onclick="CancelEditPassword" />
+                                            </div>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    }
+                    else if (activeTab == myPosts_tab)
+                    {
+                        <PostComponent postsList="@userPosts" />
+                    }
+                    else if (activeTab == savedPosts_tab)
+                    {
+                        <PostComponent postsList="@userSavedPosts" />
+                    }
+                    else if (activeTab == wallet_tab)
+                    {
+                        @if (isLoggedOnUser)
+                        {
+                            <WalletComponent user="user" />
+                        }
+                        else
+                        {
+                            <div align="center" style="width: 500px; height: 300px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+                                <br />
+                                <br />
+                                <br />
+                                <input style="width: 100px; height: 40px; border: solid darkgray 2px; border-radius: 5px;" type="number" min="0" @bind="depositCount" />
+                                <br />
+                                <br />
+                                <br />
+                                <button class="depositBtn" @onclick=DepositToOtherUserBtn>
+                                    <div style="display: flex;">
+                                        <image class="depositBtnIcon" src="/Resources/Images/deposit.png"></image>
+                                        <h6 style="font-weight: bold; margin-top:auto; margin-bottom:auto; margin-left: 20px;">Deposit</h6>
+                                    </div>
+                                </button>
+                            </div>
+
+                        }
+
+                    }
+                    else if (activeTab == followers_tab)
+                    {
+                        @if (followersList == null || followersList.Count == 0)
+                        {
+                            <p>There are no followers</p>
+                        }
+                        else
+                        {
+                            <div align="center">
+                                @foreach (var user in followersList)
+                                {
+                                    <button style="border: none; background: none;" @onclick="()=>GetSelectedUser(user)">
+                                        <div style="display: flex; margin-top: 20px; width: 200px; height: 40px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+                                            <img style="width: 20px; height: 20px; margin-left: 10px; margin-right: 10px; margin-top:auto; margin-bottom:auto;" src="@user.ProfilePhoto" />
+                                            <p style="font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; margin-top:auto; margin-bottom:auto;">@user.Username</p>
+                                        </div>
+                                    </button>
+                                    <br />
+                                }
+                            </div>
+                        }
+                    }
+                    else if (activeTab == following_tab)
+                    {
+                        @if (followingList == null || followingList.Count == 0)
+                        {
+                            <p>There are no following</p>
+                        }
+                        else
+                        {
+                            <div align="center">
+                                @foreach (var user in followingList)
+                                {
+                                    <button style="border: none; background: none;" @onclick="()=>GetSelectedUser(user)">
+                                        <div style="display: flex; margin-top: 20px; width: 200px; height: 40px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+                                            <img style="width: 20px; height: 20px; margin-left: 10px; margin-right: 10px; margin-top:auto; margin-bottom:auto;" src="@user.ProfilePhoto" />
+                                            <p style="font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; margin-top:auto; margin-bottom:auto;">@user.Username</p>
+                                        </div>
+                                    </button>
+                                    <br />
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </td>
+        </tr>
+    </table>
+}
+
+@code {
+    [Parameter] public User user { get; set; }
+
+    private string imageBase64;
+
+    private string activeTab = "1";
+    private string personalDetails_tab = "1";
+    private string myPosts_tab = "2";
+    private string savedPosts_tab = "3";
+    private string wallet_tab = "4";
+    private string followers_tab = "5";
+    private string following_tab = "6";
+
+    private int postsNum = 0;
+    private int followersNum = 0;
+    private int followingNum = 0;
+
+
+    private int depositCount;
+
+
+    private IBrowserFile selectedFile;
+    private string ProfileImagePath;
+    //User loggedOnUser;
+    User editedUser;
+    User loggedOnUser;
+    private bool isLoggedOnUser = false;
+
+    private bool isEditingFirstName = false;
+    private bool isEditingLastName = false;
+    private bool isEditingCity = false;
+    private bool isEditingPhone = false;
+    private bool isEditingAge = false;
+    private string tmpAge;
+    private bool isEditingPassword = false;
+    private bool isEditingPicture = false;
+    private string newPassword = "";
+
+    List<Post> userPosts { get; set; }
+    List<Post> userSavedPosts { get; set; }
+    List<User> followersList { get; set; }
+    List<User> followingList { get; set; }
+
+    private bool isFollowedByLoggedOnUser = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitUserData();
+    }
+
+    private async Task InitUserData()
+    {
+        loggedOnUser = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+        if (loggedOnUser != null)
+        {
+            string[] followingList = loggedOnUser.Following.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            isFollowedByLoggedOnUser = followingList.Contains(user.Id.ToString());
+        }
+
+        if (loggedOnUser.Id == user.Id)
+        {
+            isLoggedOnUser = true;
+        }
+        else
+        {
+            isLoggedOnUser = false;
+        }
+
+        editedUser = new User(user);
+        tmpAge = editedUser.Age.ToString();
+
+
+        // var res = await profileRepository.GetUserProfileImagePath(user.Id);
+        // if (res != null && res[0] != null)
+        // {
+        //     ProfileImagePath = res[0];
+        //     Console.WriteLine(ProfileImagePath);
+        // }
+        // else
+        // {
+        //     ProfileImagePath = "/Resources/Images/user.png";
+        // }
+        Console.WriteLine(user.ProfilePhoto);
+        ProfileImagePath = user.ProfilePhoto;
+
+        userPosts = await postRepository.GetPostsByUserId(user.Id);
+        if (userPosts != null)
+            postsNum = userPosts.Count;
+
+        userSavedPosts = await postRepository.GetUserSavedPosts(user.Id);
+
+        followersList = await profileRepository.GetUserFollowersList(user.Id);
+        if (followersList != null)
+            followersNum = followersList.Count;
+
+        followingList = await profileRepository.GetUserFollowingList(user.Id);
+        if (followingList != null)
+            followingNum = followingList.Count;
+
+        activeTab = personalDetails_tab;
+    }
+
+    async Task OnFileChange(InputFileChangeEventArgs e)
+    {
+        var imagesFiles = e.GetMultipleFiles();
+
+        foreach (var imageFile in imagesFiles)
+        {
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream().ReadAsync(buffer);
+            imageBase64 = Convert.ToBase64String(buffer);
+            var response = await Http.PostAsJsonAsync("api/profile", new ImageUploadModel { UserId = user.Id, ImageBase64 = imageBase64 });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var returnedUser = await response.Content.ReadFromJsonAsync<User>();
+
+                Console.WriteLine(returnedUser.Username);
+                Console.WriteLine(returnedUser.ProfilePhoto);
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", returnedUser);
+                //user = returnedUser;
+                //var imageUrl = await response.Content.ReadAsStringAsync();
+                //ProfileImagePath = imageUrl; // שמירת ה-URL של התמונה
+                NavManager.NavigateTo(NavManager.Uri, true);
+            }
+            else
+            {
+                // טיפול בשגיאה
+            }
+
+            StateHasChanged();
+        }
+
+        isEditingPicture = false;
+    }
+
+    private void SetActiveTab(string tabName)
+    {
+        activeTab = tabName;
+    }
+
+    private void EditFirstName()
+    {
+        isEditingFirstName = true;
+    }
+
+    private void EditLastName()
+    {
+        isEditingLastName = true;
+    }
+
+    private void EditCity()
+    {
+        isEditingCity = true;
+    }
+
+    private void EditPhone()
+    {
+        isEditingPhone = true;
+    }
+
+    private void EditAge()
+    {
+        isEditingAge = true;
+    }
+
+    private void EditPassword()
+    {
+        isEditingPassword = true;
+    }
+
+    private void EditProfilePicture()
+    {
+        isEditingPicture = true;
+        // imageBase64 = null;
+    }
+
+    private async Task SaveEditFirstName()
+    {
+        List<User> newUser;
+
+        if (user.FirstName != editedUser.FirstName)
+        {
+            newUser = await profileRepository.EditFirstName(editedUser.Id, editedUser.FirstName);
+
+            if (newUser != null && newUser.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+                user = newUser[0];
+            }
+        }
+
+        isEditingFirstName = false;
+        editedUser.FirstName = user.FirstName;
+    }
+
+    private async Task SaveEditLastName()
+    {
+        List<User> newUser;
+
+        if (user.LastName != editedUser.LastName)
+        {
+            newUser = await profileRepository.EditLastName(editedUser.Id, editedUser.LastName);
+
+            if (newUser != null && newUser.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+                user = newUser[0];
+            }
+        }
+
+        isEditingLastName = false;
+        editedUser.LastName = user.LastName;
+    }
+
+    private async Task SaveEditCity()
+    {
+        List<User> newUser;
+
+        if (user.City != editedUser.City)
+        {
+            newUser = await profileRepository.EditCity(editedUser.Id, editedUser.City);
+
+            if (newUser != null && newUser.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+                user = newUser[0];
+            }
+        }
+
+        isEditingCity = false;
+        editedUser.City = user.City;
+    }
+
+    private async Task SaveEditPhone()
+    {
+        List<User> newUser;
+
+        if (user.PhoneNumber != editedUser.PhoneNumber)
+        {
+            if (!IsValidPhoneNumber(editedUser.PhoneNumber))
+            {
+                await JS.InvokeAsync<object>("alert", "Invalid phone number");
+                return;
+            }
+
+            newUser = await profileRepository.EditPhoneNumber(editedUser.Id, editedUser.PhoneNumber);
+
+            if (newUser != null && newUser.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+                user = newUser[0];
+            }
+        }
+
+        isEditingPhone = false;
+        editedUser.PhoneNumber = user.PhoneNumber;
+    }
+
+    private bool IsValidPhoneNumber(string phoneNumber)
+    {
+        var phoneRegex = new Regex(@"^05\d{1}-?\d{7}$");
+        return phoneRegex.IsMatch(phoneNumber);
+    }
+
+    private async Task SaveEditAge()
+    {
+        List<User> newUser;
+
+        if (user.Age != int.Parse(tmpAge))
+        {
+            newUser = await profileRepository.EditAge(editedUser.Id, int.Parse(tmpAge));
+
+            if (newUser != null && newUser.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+                user = newUser[0];
+            }
+        }
+
+        isEditingAge = false;
+        editedUser.Age = user.Age;
+        tmpAge = user.Age.ToString();
+    }
+
+    private async Task SaveEditPassword()
+    {
+        List<User> newUser;
+
+        newUser = await profileRepository.EditPassword(editedUser.Id, newPassword);
+
+        if (newUser != null && newUser.Count > 0)
+        {
+            await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", newUser[0]);
+            user = newUser[0];
+        }
+
+        isEditingPassword = false;
+        newPassword = "";
+    }
+
+    private void CancelEditFirstName()
+    {
+        isEditingFirstName = false;
+        editedUser.FirstName = user.FirstName;
+    }
+
+    private void CancelEditLastName()
+    {
+        isEditingLastName = false;
+        editedUser.LastName = user.LastName;
+    }
+
+    private void CancelEditCity()
+    {
+        isEditingCity = false;
+        editedUser.City = user.City;
+    }
+
+    private void CancelEditPhone()
+    {
+        isEditingPhone = false;
+        editedUser.PhoneNumber = user.PhoneNumber;
+    }
+
+    private void CancelEditAge()
+    {
+        isEditingAge = false;
+        editedUser.Age = user.Age;
+        tmpAge = user.Age.ToString();
+    }
+
+    private void CancelEditPassword()
+    {
+        isEditingPassword = false;
+        newPassword = "";
+    }
+
+    private void CancelEditProfilePicture()
+    {
+        isEditingPicture = false;
+    }
+
+    private async Task FollowUser()
+    {
+        var response = await profileRepository.FollowUser(loggedOnUser.Id, user.Id);
+        if (response != null && response.Count > 0)
+        {
+            await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", response[0]);
+            isFollowedByLoggedOnUser = true;
+            followersNum += 1;
+        }
+    }
+
+    private async Task UnFollowUser()
+    {
+        var response = await profileRepository.UnFollowUser(loggedOnUser.Id, user.Id);
+        if (response != null && response.Count > 0)
+        {
+            if (response != null && response.Count > 0)
+            {
+                await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                await JS.InvokeVoidAsync("localStorageHelper.save", "user", response[0]);
+                isFollowedByLoggedOnUser = false;
+                followersNum -= 1;
+            }
+        }
+    }
+
+    private async Task GetSelectedUser(User _user)
+    {
+        var response = await searchUserRepository.GetUserByUserName(_user.Username);
+        if (response != null && response.Count > 0)
+        {
+            user = response[0];
+
+            await InitUserData();
+        }
+
+    }
+
+    private async Task DepositToOtherUserBtn()
+    {
+        if (depositCount <= 0)
+            return;
+
+        var response = await walletRepository.DepositToOtherUser(loggedOnUser.Id, user.Id, depositCount);
+        if (response != null)
+        {
+            if (response[0])
+            {
+                await JS.InvokeAsync<object>("alert", "The transfer was made successfully");
+                var u = await profileRepository.GetUser(loggedOnUser.Id);
+                if (u != null)
+                {
+                    loggedOnUser = u[0];
+                    await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+                    await JS.InvokeVoidAsync("localStorageHelper.save", "user", loggedOnUser);
+                }
+            }
+            else
+            {
+                await JS.InvokeAsync<object>("alert", "Transfer failed");
+            }
+        }
+    }
+}

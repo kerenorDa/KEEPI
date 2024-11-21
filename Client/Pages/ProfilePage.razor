@@ -1,0 +1,27 @@
+﻿@page "/profile"
+@using Keepi.Shared
+@inject IJSRuntime JS
+
+<style>
+    .backgroundImg{
+       /*  background-image: url("/Resources/Images/profile_background2.jpeg");
+        background-size: cover;
+        min-height: 100vh; */
+    }
+</style>
+
+<div class="content px-4">
+    <Profile user="@user"/>
+</div>
+
+
+@code {
+
+    User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+    }
+
+}

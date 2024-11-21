@@ -1,0 +1,131 @@
+﻿@using System.Collections.Generic
+@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject IPostRepository postRepository
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+
+<style>
+    .form-container {
+        margin: 20px;
+    }
+
+        .form-container label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        .form-container select,
+        .form-container input {
+            display: block;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        .form-container button {
+            margin-right: 10px;
+            padding: 5px 10px;
+        }
+</style>
+
+<div class="form-container">
+    <label for="comboBox">Category:</label>
+    <select id="comboBox" @bind="selectedOption">
+        @foreach (var option in Categories)
+        {
+            <option value="@option">@option</option>
+        }
+    </select>
+
+    <label for="freeText">טקסט חופשי:</label>
+    <input type="text" id="freeText" @bind="postContent" />
+
+    <button @onclick="Save">שמור</button>
+    <button @onclick="Cancel">בטל</button>
+</div>
+
+@code {
+    [Parameter]
+    public bool isEditMode { get; set; }
+    [Parameter]
+    public Post postToEdit { get; set; }
+
+    private List<string> Categories = new List<string>
+    {
+      "Animal care services",
+      "Baby and child care services",
+      "Elderly care services",
+      "Event security",
+      "Security of private buildings",
+      "Security of public buildings",
+      "Storage services"
+    };
+
+    private string selectedOption;
+    private string postContent;
+    private User user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        selectedOption = Categories[0];
+        user = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+
+        if (postToEdit != null)
+        {
+            selectedOption = postToEdit.Category;
+            postContent = postToEdit.Content;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (!isEditMode)
+        {
+            List<Post> response = await postRepository.AddNewPost(selectedOption, postContent, user.Id);
+            if (response != null && response.Count > 0)
+            {
+                NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+            }
+            else
+            {
+                //TODO failed to save...
+            }
+        }
+        else
+        {
+            List<Post> editedPost = new List<Post>();
+
+            if (postToEdit.Category != selectedOption)
+            {
+                editedPost = await postRepository.EditPostCategory(postToEdit.Id, selectedOption);
+
+            }
+            if (postToEdit.Content != postContent)
+            {
+                editedPost = await postRepository.EditPostContent(postToEdit.Id, postContent);
+            }
+
+            NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+
+            // if (editedPost != null && editedPost.Count > 0)
+            // {
+            //     NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+            // }
+        }
+    }
+
+    private void Cancel()
+    {
+        if (isEditMode)
+        {
+            NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+        }
+        else
+        {
+            selectedOption = null;
+            postContent = string.Empty;
+        }
+    }
+}

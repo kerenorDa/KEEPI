@@ -1,0 +1,171 @@
+﻿@page "/register"
+@using System.ComponentModel.DataAnnotations
+@using Keepi.Client.Repositories.Interfaces
+@inject HttpClient Http
+@inject IRegisterRepository registerRepository
+@using Keepi.Shared
+@using System.Text.RegularExpressions
+@using System.Net.Mail
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+
+<style>
+    .input {
+        width: 250px;
+        height: 60px;
+        border-radius: 10px;
+        margin-top: 20px;
+        border: solid gray 2px;
+        font-size: 20px;
+    }
+
+    .header {
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .registerBtn {
+        width: 500px;
+        height: 50px;
+        border-radius: 10px;
+        font-size: 20px;
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        background: #D169CC;
+        border: none;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+        .registerBtn:active {
+            background: #EEC4EA;
+        }
+</style>
+
+<div class="content px-4" style="margin-top: -70px;">
+    <table>
+        <tr>
+            <td>
+                <image class="img" src="/Resources/Images/image6.jpeg" style="margin-left: -20px; margin-top: 40px;"></image>
+            </td>
+            <td>
+                <table style ="margin-left: 100px;">
+                    <tr>
+                        <h1 class="header">Register</h1>
+                    </tr>
+                    <tr>
+                        <table>
+                            <tr>
+                                <td>
+                                    <input class="input" type="text" id="userName" name="userName" maxlength="20" @bind="Username" placeholder="User Name" required>
+                                </td>
+                                <td>
+                                    <input class="input" type="email" id="email" name="email" @bind="Email" placeholder="Email" required>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input class="input" type="text" id="firstName" name="firstName" @bind="FirstName" placeholder="First Name" required>
+                                </td>
+                                <td>
+                                    <input class="input" type="text" id="lastName" name="lastName" @bind="LastName" placeholder="Last Name" required>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input class="input" type="password" id="password" name="password" @bind="Password" placeholder="Password" required>
+                                </td>
+                                <td>
+                                    <input class="input" type="text" id="city" name="city" @bind="City" placeholder="City" required>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input class="input" type="number" id="age" name="age" @bind="Age" placeholder="Age" required>
+                                </td>
+                                <td>
+                                    <input class="input" type="text" id="phone" name="phone" @bind="PhoneNumber" placeholder="Phone Number" required>
+                                </td>
+                            </tr>
+                        </table>
+                    </tr>
+                    <tr>
+                        <button class="registerBtn" @onclick=Register>REGISTER</button>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+
+@code {
+    public string Username { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Password { get; set; }
+    [EmailAddress]
+    public string Email { get; set; }
+    public string City { get; set; }
+    public string Age { get; set; }
+    // public DateOnly BirthDate { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+    [Phone]
+    public string PhoneNumber { get; set; }
+
+    private async Task Register()
+    {
+        if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName) || string.IsNullOrEmpty(Password) || string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(City) || string.IsNullOrEmpty(Age)|| string.IsNullOrEmpty(PhoneNumber))
+        {
+            await JS.InvokeAsync<object>("alert", "Please fill in all the fields");
+            return;
+        }
+
+        if (!IsValidEmail(Email))
+        {
+            await JS.InvokeAsync<object>("alert", "Invalid email address");
+            return;
+        }
+
+        if (!IsValidPhoneNumber(PhoneNumber))
+        {
+            await JS.InvokeAsync<object>("alert", "Invalid phone number");
+            return;
+        }
+
+        List<User> response = await registerRepository.Register(Username, FirstName, LastName, Password, Email, City, int.Parse(Age), PhoneNumber);
+        if (response == null)
+        {
+            await JS.InvokeAsync<object>("alert", "An error occured while registration");
+        }
+        else if (response.Count == 0)
+        {
+            await JS.InvokeAsync<object>("alert", "A user with the same username or email is already exists");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", response[0]);
+            NavManager.NavigateTo("home");
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            MailAddress m = new MailAddress(email);
+
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidPhoneNumber(string phoneNumber)
+    {
+        var phoneRegex = new Regex(@"^05\d{1}-?\d{7}$");
+        return phoneRegex.IsMatch(phoneNumber);
+    }
+}
