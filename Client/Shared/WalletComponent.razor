@@ -1,0 +1,108 @@
+﻿@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject IWalletRepository walletRepository
+@inject IJSRuntime JS
+
+<style>
+    .btn1 {
+        width: 200px;
+        height: 40px;
+        background: #FF966C;
+        font-weight: bold;
+        border: solid #FF966C 2px;
+        border-radius: 20px;
+    }
+
+        .btn1:hover {
+            border: solid gray 2px;
+        }
+
+        .btn1:active {
+            background: #FAA381;
+        }
+
+    .btnIcon {
+        width: 25px;
+        height: 25px;
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-top: auto;
+        margin-bottom: auto;
+    }
+</style>
+
+<div align="center" style="width: 500px; height: 300px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+    <br />
+    <image style="width: 70px; height: 70px; margin-left: auto; margin-right: auto;" src="/Resources/Images/coins.png"></image>
+    <br />
+    <br />
+    <label style="font-weight: bold; font-size: 20px;">@walletCount</label>
+    <br />
+    <br />
+    <input style="width: 100px; height: 40px; border: solid darkgray 2px; border-radius: 5px;" type="number" min="0" @bind="count" />
+    <br />
+    <br />
+
+    <button class="btn1" @onclick=DepositBtn>
+        <div style="display: flex;">
+            <image class="btnIcon" src="/Resources/Images/deposit.png"></image>
+            <h6 style="font-weight: bold; margin-top:auto; margin-bottom:auto; margin-left: 20px;">Deposit</h6>
+        </div>
+    </button>
+    <button class="btn1" @onclick=WithdrawalBtn>
+        <div style="display: flex;">
+            <image class="btnIcon" src="/Resources/Images/withdrawal.png"></image>
+            <h6 style="font-weight: bold; margin-top:auto; margin-bottom:auto; margin-left: 20px;">Withdrawal</h6>
+        </div>
+    </button>
+</div>
+
+
+@code {
+    [Parameter] public User user { get; set; }
+    private int walletCount;
+    private int count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (user != null)
+            walletCount = user.WalletCount;
+    }
+
+    private async Task DepositBtn()
+    {
+        if (count <= 0)
+            return;
+
+        var response = await walletRepository.Deposit(user.Id, count);
+        if (response != null && response.Count > 0)
+        {
+            walletCount = response[0];
+            User tmp = user;
+            tmp.WalletCount = walletCount;
+            await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", tmp);
+        }
+    }
+
+    private async Task WithdrawalBtn()
+    {
+        if (count <= 0)
+            return;
+
+        if (user.WalletCount == 0)
+        {
+            await JS.InvokeAsync<object>("alert", "Error! cannot withdrawal because wallet count is 0");
+        }
+
+        var response = await walletRepository.Withdrawal(user.Id, count);
+        if (response != null && response.Count > 0)
+        {
+            walletCount = response[0];
+            User tmp = user;
+            tmp.WalletCount = walletCount;
+            await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", tmp);
+        }
+    }
+}
