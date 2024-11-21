@@ -1,0 +1,67 @@
+﻿@page "/notifications"
+@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject IJSRuntime JS
+@inject INotificationsRepository notificationsRepository
+
+<style>
+    ._div {
+        width: 350px;
+        height: 90px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        margin-top: 10px;
+        margin-left: auto;
+        margin-right: auto;
+        border: none;
+        border-radius: 10px;
+        background: #ECECEC;
+    }
+</style>
+
+<div align="center" style="width: 100%">
+    <br />
+    <h3 style="font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">Notifications</h3>
+    <br />
+    @if (loggedOnUser != null)
+    {
+        @if (data != null)
+        {
+            foreach (var notification in data.Notifications.OrderByDescending(n => n.Timestamp))
+            {
+                <div class="_div">
+                    <label style="font-size: 14px; margin-left: 10px; font-weight: bold;">@notification.Type</label>
+                    <br />
+                    <label style="font-size: 14px; margin-left: 10px;">@notification.Content</label>
+                    <br />
+                    <label style="font-size: 12px; margin-left: 10px;">@notification.Timestamp.ToString("dd-MM-yyyy HH:mm")</label>
+                </div>
+            }
+        }
+        else
+        {
+            <h6>There are no notifications to display</h6>
+        }
+    }
+    else
+    {
+        <h6>There is no logged on user...</h6>
+    }
+</div>
+
+@code {
+    private NotificationsData data;
+    User loggedOnUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loggedOnUser = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+        if (loggedOnUser != null)
+        {
+            List<NotificationsData> response = await notificationsRepository.ReadFile(loggedOnUser.Id.ToString());
+            if (response != null && response.Count > 0)
+            {
+                data = response[0];
+            }
+        }
+    }
+}
