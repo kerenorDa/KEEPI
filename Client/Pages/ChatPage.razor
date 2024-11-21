@@ -1,0 +1,420 @@
+﻿@page "/chat"
+@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject HttpClient Http
+@inject IChatRepository chatRepository
+@inject ISearchUserRepository searchUserRepository
+@inject IProfileRepository profileRepository
+@inject IJSRuntime JS
+@implements IDisposable
+@using System.Timers
+
+<style>
+    .newChatBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/plus.png");
+        background-size: cover;
+        margin-left: 10px;
+    }
+
+    .cancelNewChatBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/cancelIcon.png");
+        background-size: cover;
+        margin-left: 10px;
+    }
+
+    .message_left {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        width: 300px;
+        height: auto;
+        border: none;
+        border-radius: 10px;
+        background: lightgreen;
+        /* margin-left: 10px; */
+        margin-bottom: 10px;
+    }
+
+    .message_right {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        width: 300px;
+        height: auto;
+        border: none;
+        border-radius: 10px;
+        background: lightgray;
+        margin-left: auto;
+        margin-right: 10px; 
+        margin-bottom: 10px;
+        /* margin-right: 10px;
+        position: absolute;
+        right: 0px; */
+    }
+
+    .deleteChatBtn {
+        width: 20px;
+        height: 20px;
+        background: none;
+        border: none;
+        background-image: url("/Resources/Images/deleteIcon.png");
+        background-size: cover;
+        margin-left: 0px;
+        margin-top: 15px;
+    }
+
+    .sendBtn {
+        margin-left: 5px;
+        margin-right: 5px;
+        height: 50px;
+        width: 100%;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: bold;
+        background: #3A96C7;
+    }
+
+        .sendBtn:active {
+            background: lightblue;
+        }
+</style>
+
+<div style="display: flex; height: 90vh;">
+    <div style="width: 40%; border-right: solid gray 2px; display: flex; flex-direction: column;">
+        <div style="background: #E5E5E5; display: flex; padding: 10px;">
+            <h3 style="font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">My Chats</h3>
+            @if (!newChatMode)
+            {
+                <button class="newChatBtn" @onclick="CreateNewChatBtn" title="Create new chat" />
+            }
+            else
+            {
+                <button class="cancelNewChatBtn" @onclick="CancelNewChatBtn" title="Cancel" />
+            }
+        </div>
+        <div style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+            @if (newChatMode)
+            {
+                <input style="width: 90%; border-radius: 5px; border: solid gray 2px;" type="text" @bind="searchQuery" placeholder="Enter user name..." />
+                <button style="width: 8%; border-radius: 5px;" @onclick=SearchUsers>
+                    <image style="width: 20px; height: 20px;" src="/Resources/Images/search.png"></image>
+                </button>
+                <div>
+                    @if (!string.IsNullOrEmpty(searchQuery))
+                    {
+                        @if (searchResults_Users == null)
+                        {
+                            <li>Loading...</li>
+                        }
+                        else if (searchResults_Users.Count == 0)
+                        {
+                            <li>There are no results...</li>
+                        }
+                        else
+                        {
+                            @foreach (var user in searchResults_Users)
+                            {
+                                <button style="border: none; background: none;" @onclick="()=>CreateNewChat(user)">
+                                    <div style="display: flex; margin-top: 20px; width: 200px; height: 40px; background: #EAEAEA; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); border-radius: 10px;">
+                                        <img style="width: 20px; height: 20px; margin-left: 10px; margin-right: 10px; margin-top:auto; margin-bottom:auto;" src="@user.ProfilePhoto" />
+                                        <p style="font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; margin-top:auto; margin-bottom:auto;">@user.Username</p>
+                                    </div>
+                                </button>
+                                <br />
+                            }
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                @if (existingChats == null)
+                {
+                    <li>Loading...</li>
+                }
+                else if (existingChats.Count == 0)
+                {
+                    <li>There are no chats yet...</li>
+                }
+                else
+                {
+                    @foreach (var chat in existingChats)
+                    {
+                       
+                        <button style="border: none; background: none; width: 100%;" @onclick="(()=>OpenChat(chat))">
+                            <div style="display: flex; margin-top: 10px; width: 100%; height: 70px; background: #EAEAEA; border-radius: 5px;">
+                                <img style="width: 25px; height: 25px; margin-left: 15px; margin-right: 15px; margin-top:auto; margin-bottom:auto;" src="@chat.User.ProfilePhoto" />
+                                <p style="font-size: 18px; font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; margin-top:auto; margin-bottom:auto;">@chat.User.Username</p>
+                                @if ((loggedOnUser.Id.ToString() == chat.Data.User1_Id && chat.Data.IsNewMessages_user1) || (loggedOnUser.Id.ToString() == chat.Data.User2_Id && chat.Data.IsNewMessages_user2))
+                                {
+                                    <image style="height: 35px; width: 35px; margin-top:auto; margin-bottom:auto; margin-left:auto; margin-right: 10px;" src="/Resources/Images/new_message.png"></image>
+                                }
+                            </div>
+                        </button>
+                        <br />
+                    }
+                }
+            }
+        </div>
+    </div>
+
+    <div style="width: 60%; display: flex; flex-direction: column;">
+        @if (!string.IsNullOrEmpty(selectedChat_UserName))
+        {
+            <div style="padding: 10px; background: #f0f0f0;">
+                <h3 style="text-align:center; font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">@selectedChat_UserName</h3>
+            </div>
+
+            <div style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                @if (SelectedChatData != null)
+                {
+                    <table style="width: 100%;">
+                        @foreach (var message in SelectedChatData.Messages)
+                        {
+                            @if (message.UserId == loggedOnUser.Id.ToString())
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="message_left">
+                                            <label style="font-size: 14px; margin-left: 10px; white-space: pre-line;">@message.Content</label>
+                                            <br />
+                                            <label style="font-size: 12px; margin-left: 10px;">@message.Timestamp</label>
+                                        </div>
+                                    </td>
+                                    <td style="width: 40px;"></td>
+                                    <td></td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td></td>
+                                    <td style="width: 40px;"></td>
+                                    <td>
+                                        <div class="message_right">
+                                            <label style="font-size: 14px; margin-left: 10px; white-space: pre-line;">@message.Content</label>
+                                            <br />
+                                            <label style="font-size: 12px; margin-left: 10px;">@message.Timestamp</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </table>
+                }
+            </div>
+
+            <div style="padding: 10px; background: #f0f0f0;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 90%;">
+                            @* <input style="height: 50px; width: 100%; border-radius: 10px; border: solid gray 2px;" @bind=newMessage /> *@
+                            <textarea style="height: 50px; width: 100%; border-radius: 10px; border: solid gray 2px;" @bind=newMessage />
+                        </td>
+                        <td style="width: 10%;">
+                            <button class="sendBtn" @onclick=SendMessage>Send</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    User loggedOnUser;
+    string selectedChat;
+    string selectedChat_UserName;
+    ChatData SelectedChatData;
+    string newMessage;
+    private Timer timer;
+    bool newChatMode = false;
+    private List<Chat> existingChats;
+
+    private string searchQuery = "";
+    private List<string> searchResults = new List<string>();
+    private List<User> searchResults_Users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loggedOnUser = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+
+        timer = new Timer(500);
+        timer.Elapsed += OnTimerElapsed;
+        timer.AutoReset = true;
+        timer.Enabled = true;
+    }
+
+    private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        GetUserChats();
+        ReadChatFile(selectedChat);
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task GetUserChats()
+    {
+        if (loggedOnUser != null)
+        {
+            existingChats = await chatRepository.GetUserChats(loggedOnUser.Id.ToString());
+        }
+    }
+
+    // private async Task<string> GetUserProfileImagePath(Guid userId)
+    // {
+    //     string ProfileImagePath;
+    //     var res = await profileRepository.GetUserProfileImagePath(userId);
+    //     if (res != null && res[0] != null)
+    //     {
+    //         ProfileImagePath = res[0];
+    //         // Console.WriteLine(ProfileImagePath);
+    //     }
+    //     else
+    //     {
+    //         Console.WriteLine("@@@@@@@@@@@@");
+
+    //         ProfileImagePath = "Resources\\Images\\user.png";
+    //     }
+    //     // var ProfileImagePath = "/Resources/Images/user.png";
+
+    //     return ProfileImagePath;
+    // }
+
+    private void CreateNewChatBtn()
+    {
+        if (loggedOnUser == null)
+            return;
+
+        newChatMode = true;
+        selectedChat = string.Empty;
+        SelectedChatData = null;
+        selectedChat_UserName = string.Empty;
+    }
+
+    private void CancelNewChatBtn()
+    {
+        newChatMode = false;
+    }
+
+    private async Task CreateNewChat(User user)
+    {
+        if (user == null)
+            return;
+
+        newChatMode = false;
+        searchResults_Users = new List<User>();
+        searchQuery = string.Empty;
+        var response = await chatRepository.CreateNewChatFile(loggedOnUser.Id.ToString(), user.Id.ToString());
+        if (response != null && response.Count > 0)
+        {
+            selectedChat = response[0].FileName;
+            selectedChat_UserName = response[0].User.Username;
+        }
+    }
+
+    private async Task OpenChat(Chat chat)
+    {
+        if (chat == null)
+            return;
+
+        selectedChat_UserName = chat.User.Username;
+        selectedChat = chat.FileName;
+        SelectedChatData = null;
+        ReadChatFile(selectedChat);
+    }
+
+    private async Task DeleteChatBtn(Chat chat)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this chat?");
+
+        if (confirmed)
+        {
+            var response = await chatRepository.DeleteChat(chat.FileName);
+            if (response != null && response.Count > 0)
+            {
+                if (response[0] == true)
+                {
+                    selectedChat = string.Empty;
+                    SelectedChatData = null;
+                    selectedChat_UserName = string.Empty;
+                }
+            }
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        Console.WriteLine(newMessage);
+        if (loggedOnUser == null)
+            return;
+        if (string.IsNullOrEmpty(selectedChat))
+            return;
+        if (string.IsNullOrEmpty(newMessage))
+            return;
+
+
+        var response = await Http.PostAsJsonAsync("api/chat", new string[] { selectedChat, loggedOnUser.Id.ToString(), newMessage });
+
+        //var response = await chatRepository.AddMessageToChat(selectedChat, loggedOnUser.Id.ToString(), newMessage);
+        await Task.Delay(500);
+        newMessage = string.Empty;
+    }
+
+    private async Task ReadChatFile(string fileName)
+    {
+        if (loggedOnUser == null)
+            return;
+        if (string.IsNullOrEmpty(fileName))
+            return;
+
+        List<ChatData> response = await chatRepository.ReadChatFile(fileName, loggedOnUser.Id.ToString());
+        if (response != null && response.Count > 0)
+        {
+            SelectedChatData = response[0];
+        }
+    }
+
+    private async Task GetSearchResultsUserList(List<string> userNamesList)
+    {
+        searchResults_Users = new List<User>();
+
+        if (userNamesList == null || userNamesList.Count == 0)
+            return;
+
+        foreach (var userName in userNamesList)
+        {
+            if (userName != loggedOnUser.Username)
+            {
+                var response = await searchUserRepository.GetUserByUserName(userName);
+                if (response != null && response.Count > 0)
+                {
+                    searchResults_Users.Add(response[0]);
+                }
+            }
+        }
+    }
+
+    private async Task SearchUsers()
+    {
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            searchResults = await searchUserRepository.SearchUsers(searchQuery);
+            await GetSearchResultsUserList(searchResults);
+        }
+        else
+        {
+            searchResults.Clear();
+        }
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}
