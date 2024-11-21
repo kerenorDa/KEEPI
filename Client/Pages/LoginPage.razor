@@ -1,0 +1,284 @@
+﻿@page "/"
+@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject IJSRuntime JS
+@inject ILoginRepository loginRepository
+@inject NavigationManager NavManager
+
+<style>
+    .input {
+        width: 400px;
+        height: 60px;
+        border-radius: 10px;
+        margin-top: 20px;
+        border: solid gray 2px;
+        font-size: 20px;
+    }
+
+    .header {
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        text-align: center;
+    }
+
+    .loginBtn {
+        width: 400px;
+        height: 50px;
+        border-radius: 10px;
+        font-size: 20px;
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        background: #8FCCBA;
+        border: none;
+        margin-top: 20px;
+    }
+
+        .loginBtn:active {
+            background: #DBF5EA;
+        }
+</style>
+
+<div class="content px-4">
+    <table>
+        <tr>
+            <td>
+                <image class="img" src="/Resources/Images/image4.jpeg" style="margin-left: -20px;"></image>
+            </td>
+            <td>
+                <table style="margin-left: 100px;">
+                    <tr>
+                        <h1 class="header">Login</h1>
+                    </tr>
+                    <tr>
+                        <input class="input" type="text" id="userName" name="userName" @bind="userName" placeholder="User Name" required>
+                    </tr>
+                    <tr>
+                        <input class="input" type="password" id="password" name="password" @bind="password" placeholder="Password" required>
+                    </tr>
+                    <tr>
+                        <button class="loginBtn" @onclick=Login>LOGIN</button>
+                    </tr>
+                    <tr>
+                        <h6 style="margin-top: 50px; text-align:center; font-weight:bold; color: black;">@loading</h6>
+                    </tr>
+                    <tr>
+                        <h6 style="margin-top: 50px; text-align:center; font-weight:bold; color: gray;">Don't have an account?</h6>
+                    </tr>
+                    <tr>
+                        <a align="center" href="register">
+                            <h6 style="text-align:center;">Create one now</h6>
+                        </a>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+
+@code {
+    private string email;
+    private string userName;
+    private string password;
+    private string loading;
+
+    private async Task Login()
+    {
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))
+        {
+            await JS.InvokeAsync<object>("alert", "Please enter user name and password");
+            loading = "";
+            return;
+        }
+
+        loading = "Loading...";
+        List<User> response = await loginRepository.Login(userName, password);
+        if (response == null)
+        {
+            await JS.InvokeAsync<object>("alert", "An error occured while login");
+            loading = "";
+        }
+        else if (response.Count == 0)
+        {
+            await JS.InvokeAsync<object>("alert", "Invalid user name or password");
+            loading = "";
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("localStorageHelper.save", "user", response[0]);
+            NavManager.NavigateTo("home");
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@* @page "/login"
+@using Keepi.Client.Repositories.Implementation
+@using Keepi.Client.Repositories.Interfaces
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject ILoginRepository loginRepository *@
+
+@*
+<style>
+    .login-container {
+        display: flex;
+        height: 100vh;
+    }
+
+    .login-form {
+        flex: 1;
+        padding: 2rem;
+        background-color: white;
+    }
+
+    .image-container {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8f8f8;
+    }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+        }
+
+    form {
+        display: flex;
+        flex-direction: column;
+    }
+
+    label {
+        margin: 0.5rem 0 0.25rem;
+    }
+
+    input {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 0.25rem;
+    }
+
+    .remember-me {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    button {
+        padding: 0.75rem;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+
+    a {
+        color: #4caf50;
+        text-decoration: none;
+    }
+</style>
+
+
+<div class="login-container">
+    <div class="login-form">
+        <h1>Log in</h1>
+        <form>
+            <label for="email">Email</label>
+            <input type="text" id="email" name="email" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <div>
+                <label>Username: </label>
+                <InputText @bind-Value="loginModel.Email" />
+                <ValidationMessage For="@(() => loginModel.Email)" />
+            </div>
+            <div>
+                <label>Password: </label>
+                <InputText @bind-Value="loginModel.Password" type="password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">remember me</label>
+                <a href="#">Forgot Password ?</a>
+            </div>
+
+            <button @onclick=HandleValidSubmit>Login</button>
+
+            <button type="submit" @onclick=Login>Log in</button>
+       </form>
+        <p>Don't have an account? <a href="#">Register Now</a></p>
+    </div>
+    <div class="image-container">
+        <img src="/Resources/Images/image2.jpeg" alt="Login Image">
+    </div>
+</div> *@
+
+@* @code {
+    private LoginModel loginModel = new LoginModel();
+
+    private async Task HandleValidSubmit()
+    {
+        await Task.Delay(1000);
+        Console.WriteLine("!233r2tr24t3t3!!!!!!!");
+
+        //var response = await loginRepository.Login();
+        // var response = await Http.PostAsJsonAsync("api/login", loginModel);
+        // if (response.IsSuccessStatusCode)
+        // {
+        //     // Handle successful login (e.g., navigate to a dashboard or show a success message)
+        // }
+        // else
+        // {
+        //     // Handle login failure (e.g., show an error message)
+        // }
+    }
+    private async Task OnLogin()
+    {
+        await Task.Delay(1000);
+
+        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!");
+
+        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        // var user = authState.User;
+
+        // if (user.Identity.IsAuthenticated)
+        // {
+        //     var userName = user.Identity.Name;
+        //     Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!");
+        //     Console.WriteLine(userName);
+        //     // ניתן לשמור את פרטי המשתמש
+        // }
+        // else
+        // {
+        //     // הטיפול במשתמש לא מחובר
+        // }
+    }
+
+
+    public class LoginModel
+    {
+        [Required]
+        public string Email { get; set; }
+        [Required]
+        public string Password { get; set; }
+    }
+} *@
