@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Keepi.Server", "Server\Keepi.Server.csproj", "{129CCCDC-2F82-456E-8E1C-8DA9014FB789}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Keepi.Client", "Client\Keepi.Client.csproj", "{9C212778-D921-411A-AA13-D4C32B1439EB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Keepi.Shared", "Shared\Keepi.Shared.csproj", "{6AE5BD39-4B8F-4740-8969-1603D5643900}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{66767322-41BF-4222-8682-16479AD1E663}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+		.gitignore = .gitignore
+		Readme.txt = Readme.txt
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{129CCCDC-2F82-456E-8E1C-8DA9014FB789}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{129CCCDC-2F82-456E-8E1C-8DA9014FB789}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{129CCCDC-2F82-456E-8E1C-8DA9014FB789}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{129CCCDC-2F82-456E-8E1C-8DA9014FB789}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C212778-D921-411A-AA13-D4C32B1439EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C212778-D921-411A-AA13-D4C32B1439EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C212778-D921-411A-AA13-D4C32B1439EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C212778-D921-411A-AA13-D4C32B1439EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AE5BD39-4B8F-4740-8969-1603D5643900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AE5BD39-4B8F-4740-8969-1603D5643900}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AE5BD39-4B8F-4740-8969-1603D5643900}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AE5BD39-4B8F-4740-8969-1603D5643900}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {18AA05DE-A557-4F04-954F-723904ABAA06}
+	EndGlobalSection
+EndGlobal

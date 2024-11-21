@@ -1,0 +1,37 @@
+﻿@using Keepi.Client.Services
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+<div class="page">
+@*     <div class="sidebar">
+        <NavMenu />
+    </div> *@
+
+    <main>
+        <div class="top-row px-4">
+            <TopMenu />
+        </div>
+
+        @Body
+
+        @* <div class="content px-4"> *@
+            @* <NavMenu /> *@
+            @* @Body *@
+        @* </div> *@
+    </main>
+</div>
+
+@* @code{
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthService.IsUserLoggedIn())
+        {
+            Navigation.NavigateTo("/home");
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+} *@

@@ -1,0 +1,171 @@
+﻿@using Keepi.Client.Repositories.Interfaces
+@using Keepi.Shared
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+@inject INotificationsRepository notificationsRepository
+@using System.Timers
+
+<style>
+    .nav_btn {
+        border: 0px;
+        background: transparent;
+        border-radius: 50%;
+        height: 35px;
+        width: 35px;
+        align-content: center;
+        margin-left: 15px;
+    }
+
+        .nav_btn:hover {
+            background: lightgray;
+        }
+
+        .nav_btn:active {
+            background: gray;
+        }
+
+    .btn_img {
+        width: 25px;
+        height: 25px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+</style>
+
+<div style="position:absolute; left:0px; margin-left: 10px;">
+    <image style="width: 150px; height: 50px;" src="/Resources/Images/Logo3.png"></image>
+</div>
+
+<div style="position:absolute; right:0px; margin-right: 10px;">
+    @if (!isUserLoggedOn)
+    {
+        <button class="nav_btn" @onclick="LoginBtn">
+            <image class="btn_img" src="/Resources/Images/login.png"></image>
+        </button>
+    }
+    else
+    {
+        <button class="nav_btn" @onclick="ProfileBtn">
+            <image class="btn_img" src="/Resources/Images/user.png"></image>
+        </button>
+
+        <button class="nav_btn" @onclick="HomeBtn">
+            <image class="btn_img" src="/Resources/Images/home.png"></image>
+        </button>
+
+        @if (isNewNotification)
+        {
+            <button class="nav_btn" @onclick="NotificationsBtn">
+                <image class="btn_img" src="/Resources/Images/notification.png"></image>
+            </button>
+        }
+        else
+        {
+            <button class="nav_btn" @onclick="NotificationsBtn">
+                <image class="btn_img" src="/Resources/Images/bell.png"></image>
+            </button>
+        }
+
+
+        <button class="nav_btn" @onclick="SearchBtn">
+            <image class="btn_img" src="/Resources/Images/search.png"></image>
+        </button>
+
+        <button class="nav_btn" @onclick="ChatBtn">
+            <image class="btn_img" src="/Resources/Images/chat.png"></image>
+        </button>
+
+        <button class="nav_btn" @onclick="LogoutBtn">
+            <image class="btn_img" src="/Resources/Images/logout.png"></image>
+        </button>
+    }
+</div>
+
+
+@code {
+    private bool isUserLoggedOn = false;
+    private bool isNewNotification = false;
+    private Timer timer;
+    User loggedOnUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        timer = new Timer(500);
+        timer.Elapsed += OnTimerElapsed;
+        timer.AutoReset = true;
+        timer.Enabled = true;
+
+    }
+
+    private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        GetUser();
+        CheckNotifications();
+
+        if (loggedOnUser == null)
+            isUserLoggedOn = false;
+        else
+            isUserLoggedOn = true;
+
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task GetUser()
+    {
+        loggedOnUser = await JS.InvokeAsync<User>("localStorageHelper.get", "user");
+    }
+
+    private async Task CheckNotifications()
+    {
+        if (loggedOnUser == null)
+            return;
+
+        var res = await notificationsRepository.CheckForNewNotifications(loggedOnUser.Id.ToString());
+        if (res != null && res.Count > 0)
+        {
+            isNewNotification = res[0];
+        }
+    }
+
+    private void LoginBtn()
+    {
+        NavManager.NavigateTo("/");
+    }
+
+    private void ProfileBtn()
+    {
+        NavManager.NavigateTo("/profile");
+    }
+
+    private void HomeBtn()
+    {
+        NavManager.NavigateTo("/home");
+    }
+
+    private void NotificationsBtn()
+    {
+        NavManager.NavigateTo("/notifications");
+    }
+
+    private void SearchBtn()
+    {
+        NavManager.NavigateTo("/searchProfile");
+    }
+
+    private void ChatBtn()
+    {
+        NavManager.NavigateTo("/chat");
+    }
+
+    private async Task LogoutBtn()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to logout?");
+
+        if (confirmed)
+        {
+            await JS.InvokeVoidAsync("localStorageHelper.remove", "user");
+            NavManager.NavigateTo("/");
+        }
+
+    }
+}
